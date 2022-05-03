@@ -1,0 +1,6 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+parameter_overrides= "DynamoDBTableName=VisitorCount ACMCertARN=arn:aws:acm:us-east-1:467069435281:certificate/03127741-610e-4062-95c2-450b614918de ApiDomainName=visitorcountapi.stareventhorizon.com R53HostedZoneId=Z02531016FA5JXCA3QJQ ApiPathMapping=Prod"
+capabilities = "CAPABILITY_IAM"

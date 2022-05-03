@@ -1,0 +1,87 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'Maintains My Website Visitor Count
+  '
+
+Parameters:
+  DynamoDBTableName:
+    Description: DynamoDB Table Name
+    Type: String
+
+  ACMCertARN:
+    Description: ACM CloudFront Certificate ARN
+    Type: String
+
+  ApiDomainName:
+    Description: Custom Domain name for your API
+    Type: String
+
+  R53HostedZoneId:
+    Description: Route 53 Hosted Zone Name
+    Type: String
+
+  ApiPathMapping:
+    Description: Path Mapping for API
+    Type: String
+    Default: Prod
+
+Resources:
+  VisitorCountTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref DynamoDBTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: Label
+        AttributeType: S
+      KeySchema:
+      - AttributeName: Label
+        KeyType: HASH
+
+  VisitorCountApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Domain:
+        DomainName: !Ref ApiDomainName
+        CertificateArn: !Ref ACMCertARN
+        EndpointConfiguration: EDGE
+        Route53:
+          HostedZoneId: !Ref R53HostedZoneId
+          EvaluateTargetHealth: true
+        BasePath: 
+        - !Ref ApiPathMapping
+      Cors:
+        AllowMethods: "'*'"
+        AllowHeaders: "'*'"
+        AllowOrigin: "'*'"
+
+  VisitorCountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: VisitorCountFunction
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Environment:
+        Variables:
+          DynamoDBTableName: !Ref VisitorCountTable      
+      Architectures:
+        - x86_64      
+      Policies:
+       - DynamoDBWritePolicy:
+          TableName: !Ref VisitorCountTable 
+       - DynamoDBReadPolicy:
+          TableName: !Ref VisitorCountTable  
+      Events:
+        VisitorCount:
+          Type: Api
+          Properties:
+            Path: /visitorcount
+            Method: ANY
+            RestApiId: !Ref VisitorCountApi
+
+Outputs:
+  ApiVisitorCountURL:
+    Description: API Gateway endpoint URL for Prod stage for Getting Visitor count
+    Value:
+      Fn::Sub: https://${VisitorCountApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/visitorcount/
